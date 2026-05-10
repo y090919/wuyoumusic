@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>无忧音乐 - 管理面板</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', sans-serif;
+    font-size: 14px;
+    --bg: #f5f5f7;
+    --card: #ffffff;
+    --text: #1d1d1f;
+    --text2: #86868b;
+    --accent: #ff2d55;
+    --green: #34c759;
+    --red: #ff3b30;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  }
+  body { background: var(--bg); color: var(--text); padding: 40px 20px; -webkit-font-smoothing: antialiased; }
+  .container { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.5px; }
+  .subtitle { color: var(--text2); margin-bottom: 32px; }
+  .card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px; margin-bottom: 16px; }
+  .card h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+  .status { display: flex; align-items: center; gap: 12px; padding: 16px; background: #f0f0f0; border-radius: 8px; margin-bottom: 20px; }
+  .status-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+  .status-text { font-weight: 600; }
+  .status-info { color: var(--text2); font-size: 13px; margin-top: 2px; }
+  .form-group { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; }
+  .form-group label { font-weight: 500; white-space: nowrap; }
+  .form-group input { flex: 1; padding: 10px 14px; border: 1px solid #d2d2d7; border-radius: 8px; font-size: 14px; outline: none; font-family: inherit; transition: border-color 0.2s; max-width: 120px; }
+  .form-group input:focus { border-color: var(--accent); }
+  .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-danger { background: var(--red); color: white; }
+  .btn-outline { background: transparent; border: 1px solid #d2d2d7; color: var(--text); }
+  .link { color: var(--accent); text-decoration: none; font-weight: 500; }
+  .link:hover { text-decoration: underline; }
+
+  /* Image picker */
+  .bg-section { margin-bottom: 24px; }
+  .bg-section:last-child { margin-bottom: 0; }
+  .bg-section h4 { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
+  .bg-preview { width: 100%; height: 120px; border-radius: 8px; background: #0e0c10; margin-bottom: 10px; background-size: cover; background-position: center; border: 2px solid #d2d2d7; display: flex; align-items: center; justify-content: center; color: #666; font-size: 13px; }
+  .bg-preview.default { background: radial-gradient(ellipse 70% 60% at 15% 85%, rgba(139,125,139,0.15) 0%, transparent 60%), radial-gradient(ellipse 60% 50% at 85% 20%, rgba(138,154,138,0.12) 0%, transparent 55%), radial-gradient(ellipse 50% 40% at 50% 50%, rgba(154,138,130,0.08) 0%, transparent 50%), radial-gradient(ellipse 40% 60% at 70% 80%, rgba(125,138,154,0.10) 0%, transparent 50%), #0e0c10; }
+  .bg-preview.none-selected::after { content: '未选择图片（使用默认渐变）'; }
+
+  .image-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; max-height: 200px; overflow-y: auto; padding: 4px 0; }
+  .image-grid .img-item { width: 80px; height: 56px; border-radius: 6px; cursor: pointer; border: 2px solid transparent; background-size: cover; background-position: center; transition: border-color 0.15s; position: relative; }
+  .image-grid .img-item:hover { border-color: var(--text2); }
+  .image-grid .img-item.selected { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(255,45,85,0.2); }
+  .image-grid .img-item .del-btn { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: var(--red); color: white; border: none; font-size: 10px; cursor: pointer; display: none; align-items: center; justify-content: center; }
+  .image-grid .img-item:hover .del-btn { display: flex; }
+
+  .upload-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .upload-row input[type="file"] { font-size: 13px; font-family: inherit; }
+
+  @media (max-width: 480px) { body { padding: 20px 12px; } .form-group { flex-direction: column; align-items: stretch; } .form-group input { max-width: 100%; } .image-grid .img-item { width: 64px; height: 48px; } }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>⚙ 管理面板</h1>
+    <p class="subtitle">无忧音乐播放器 — 服务管理</p>
+
+    <div class="card">
+      <div class="status" id="status-bar">
+        <span class="status-dot" id="status-dot"></span>
+        <div>
+          <div class="status-text" id="status-text">检查中...</div>
+          <div class="status-info" id="status-info"></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>端口号</label>
+        <input type="number" id="port-input" value="8080" min="1" max="65535">
+        <button class="btn btn-primary" id="save-port-btn">保存并重启</button>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn btn-danger" id="shutdown-btn">⏹ 关闭服务</button>
+        <button class="btn btn-outline" id="open-player-btn">🌐 打开播放器</button>
+      </div>
+    </div>
+
+    <!-- Background Settings -->
+    <div class="card">
+      <h3>🎨 背景图片设置</h3>
+
+      <div class="bg-section">
+        <h4>🖥 电脑端背景</h4>
+        <div id="desktop-preview" class="bg-preview default none-selected"></div>
+        <div class="image-grid" id="desktop-grid"></div>
+      </div>
+
+      <div class="bg-section">
+        <h4>📱 手机端背景</h4>
+        <div id="mobile-preview" class="bg-preview default none-selected"></div>
+        <div class="image-grid" id="mobile-grid"></div>
+      </div>
+
+      <div class="upload-row">
+        <input type="file" id="upload-input" accept="image/png,image/jpeg,image/gif,image/webp">
+        <button class="btn btn-primary" id="upload-btn">📤 上传图片</button>
+        <button class="btn btn-outline" id="save-bg-btn">💾 保存设置</button>
+        <span id="bg-save-msg" style="font-size:13px;color:var(--green);display:none;">已保存</span>
+      </div>
+      <p style="color:var(--text2);font-size:12px;margin-top:8px;">支持 PNG、JPG、GIF、WebP 格式。上传后点击图片选择，再点"保存设置"。不选图片 = 使用默认渐变背景。</p>
+    </div>
+
+    <div class="card">
+      <p style="color:var(--text2);font-size:13px;">
+        💡 提示：更改端口后点击"保存并重启"即可生效。
+        关闭服务后需重新启动 EXE 以恢复运行。
+        背景设置保存后需刷新播放器页面生效。
+      </p>
+    </div>
+  </div>
+
+  <script>
+    const portInput = document.getElementById('port-input');
+    const statusDot = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+    const statusInfo = document.getElementById('status-info');
+    const shutdownBtn = document.getElementById('shutdown-btn');
+    const savePortBtn = document.getElementById('save-port-btn');
+    const openPlayerBtn = document.getElementById('open-player-btn');
+
+    // Background elements
+    const desktopPreview = document.getElementById('desktop-preview');
+    const mobilePreview = document.getElementById('mobile-preview');
+    const desktopGrid = document.getElementById('desktop-grid');
+    const mobileGrid = document.getElementById('mobile-grid');
+    const uploadInput = document.getElementById('upload-input');
+    const uploadBtn = document.getElementById('upload-btn');
+    const saveBgBtn = document.getElementById('save-bg-btn');
+    const bgSaveMsg = document.getElementById('bg-save-msg');
+
+    let availableImages = [];
+    let selectedDesktop = null;  // filename or null (default)
+    let selectedMobile = null;
+
+    // === Status ===
+
+    async function fetchStatus() {
+      try {
+        const res = await fetch('/api/admin/status');
+        const data = await res.json();
+        statusDot.className = 'status-dot';
+        statusText.textContent = '● 服务运行中';
+        statusInfo.textContent = `端口: ${data.port} | 歌曲: ${data.songCount} 首 | 列表: ${data.playlistCount} 个`;
+        portInput.value = data.port;
+      } catch (e) {
+        statusDot.style.background = 'var(--red)';
+        statusText.textContent = '● 服务已停止';
+        statusInfo.textContent = '无法连接服务器';
+      }
+    }
+
+    async function callAdmin(action, body = {}) {
+      try {
+        const endpoints = {
+          shutdown: '/api/admin/shutdown',
+          restart: '/api/admin/restart',
+          port: '/api/admin/port'
+        };
+        const res = await fetch(endpoints[action], {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+
+        if (action === 'shutdown') {
+          alert('服务已关闭');
+          statusDot.style.background = 'var(--red)';
+          statusText.textContent = '● 服务已停止';
+        } else if (action === 'port' || action === 'restart') {
+          alert('服务正在重启，请稍候...');
+          setTimeout(fetchStatus, 3000);
+        }
+      } catch (e) {
+        alert(`操作失败: ${e.message}`);
+      }
+    }
+
+    // === Background ===
+
+    function renderImageGrid(gridEl, selectedFilename, onSelect) {
+      gridEl.innerHTML = '';
+      // "None" option
+      const noneItem = document.createElement('div');
+      noneItem.className = 'img-item' + (selectedFilename === null ? ' selected' : '');
+      noneItem.style.cssText = 'border-color:#d2d2d7;display:flex;align-items:center;justify-content:center;font-size:11px;color:#999;background:#f5f5f7;';
+      noneItem.textContent = '默认';
+      noneItem.title = '使用默认渐变背景';
+      noneItem.addEventListener('click', () => onSelect(null));
+      gridEl.appendChild(noneItem);
+
+      for (const img of availableImages) {
+        const div = document.createElement('div');
+        div.className = 'img-item' + (selectedFilename === img ? ' selected' : '');
+        div.style.backgroundImage = `url(/bg-images/${encodeURIComponent(img)})`;
+        div.title = img;
+        div.addEventListener('click', () => onSelect(img));
+        // Delete button
+        const del = document.createElement('button');
+        del.className = 'del-btn';
+        del.textContent = '✕';
+        del.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (!confirm(`删除 ${img}？`)) return;
+          // We delete by just not selecting it; actual file deletion requires server support
+          // For now, deselect if it was selected
+          if (selectedFilename === img) onSelect(null);
+          // Remove from grid visually and file via API
+          try {
+            await fetch('/api/config/bg/delete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ filename: img })
+            });
+            availableImages = availableImages.filter(f => f !== img);
+            renderAllGrids();
+            updatePreviews();
+          } catch (e) {
+            alert('删除失败');
+          }
+        });
+        div.appendChild(del);
+        gridEl.appendChild(div);
+      }
+    }
+
+    function renderAllGrids() {
+      renderImageGrid(desktopGrid, selectedDesktop, (f) => { selectedDesktop = f; renderAllGrids(); updatePreviews(); });
+      renderImageGrid(mobileGrid, selectedMobile, (f) => { selectedMobile = f; renderAllGrids(); updatePreviews(); });
+    }
+
+    function updatePreviews() {
+      desktopPreview.className = 'bg-preview';
+      if (selectedDesktop) {
+        desktopPreview.style.backgroundImage = `url(/bg-images/${encodeURIComponent(selectedDesktop)})`;
+        desktopPreview.style.backgroundSize = 'cover';
+        desktopPreview.style.backgroundPosition = 'center';
+        desktopPreview.textContent = '';
+      } else {
+        desktopPreview.className = 'bg-preview default none-selected';
+        desktopPreview.style.backgroundImage = '';
+        desktopPreview.textContent = '';
+      }
+
+      mobilePreview.className = 'bg-preview';
+      if (selectedMobile) {
+        mobilePreview.style.backgroundImage = `url(/bg-images/${encodeURIComponent(selectedMobile)})`;
+        mobilePreview.style.backgroundSize = 'cover';
+        mobilePreview.style.backgroundPosition = 'center';
+        mobilePreview.textContent = '';
+      } else {
+        mobilePreview.className = 'bg-preview default none-selected';
+        mobilePreview.style.backgroundImage = '';
+        mobilePreview.textContent = '';
+      }
+    }
+
+    async function loadBgConfig() {
+      try {
+        const res = await fetch('/api/config/bg');
+        const data = await res.json();
+        availableImages = data.images || [];
+        selectedDesktop = data.desktop || null;
+        selectedMobile = data.mobile || null;
+        renderAllGrids();
+        updatePreviews();
+      } catch (e) {
+        // defaults
+      }
+    }
+
+    saveBgBtn.addEventListener('click', async () => {
+      try {
+        const res = await fetch('/api/config/bg', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            desktop: selectedDesktop,
+            mobile: selectedMobile
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          bgSaveMsg.style.display = 'inline';
+          setTimeout(() => { bgSaveMsg.style.display = 'none'; }, 3000);
+        } else {
+          alert('保存失败');
+        }
+      } catch (e) {
+        alert(`保存失败: ${e.message}`);
+      }
+    });
+
+    // Upload
+    uploadBtn.addEventListener('click', async () => {
+      const file = uploadInput.files[0];
+      if (!file) { alert('请先选择图片文件'); return; }
+      const validTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+      if (!validTypes.includes(file.type)) { alert('仅支持 PNG、JPG、GIF、WebP 格式'); return; }
+
+      uploadBtn.textContent = '⏳ 上传中...';
+      uploadBtn.disabled = true;
+
+      try {
+        // Read file as base64
+        const reader = new FileReader();
+        const base64 = await new Promise((resolve, reject) => {
+          reader.onload = () => {
+            const result = reader.result;
+            const base64Str = result.split(',')[1];
+            resolve(base64Str);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        const res = await fetch('/api/config/bg/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: file.name, data: base64 })
+        });
+        const result = await res.json();
+        if (result.success) {
+          availableImages.push(result.filename);
+          renderAllGrids();
+          updatePreviews();
+          uploadInput.value = '';
+          bgSaveMsg.textContent = '上传成功';
+          bgSaveMsg.style.display = 'inline';
+          setTimeout(() => { bgSaveMsg.style.display = 'none'; bgSaveMsg.textContent = '已保存'; }, 3000);
+        } else {
+          alert('上传失败: ' + (result.error || '未知错误'));
+        }
+      } catch (e) {
+        alert('上传失败: ' + e.message);
+      }
+
+      uploadBtn.textContent = '📤 上传图片';
+      uploadBtn.disabled = false;
+    });
+
+    // === Admin Actions ===
+
+    shutdownBtn.addEventListener('click', () => {
+      if (confirm('确定要关闭服务吗？')) {
+        callAdmin('shutdown');
+      }
+    });
+
+    savePortBtn.addEventListener('click', () => {
+      const port = parseInt(portInput.value, 10);
+      if (!port || port < 1 || port > 65535) {
+        alert('请输入有效端口号 (1-65535)');
+        return;
+      }
+      if (confirm(`将端口改为 ${port} 并重启服务，确定吗？`)) {
+        callAdmin('port', { port });
+      }
+    });
+
+    openPlayerBtn.addEventListener('click', () => {
+      const port = portInput.value;
+      window.open(`http://localhost:${port}`, '_blank');
+    });
+
+    fetchStatus();
+    loadBgConfig();
+    setInterval(fetchStatus, 5000);
+  </script>
+</body>
+</html>

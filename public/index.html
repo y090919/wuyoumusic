@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>无忧音乐播放器</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Background gradient layer -->
+  <div class="bg-layer"></div>
+  <div id="app">
+    <!-- Top Bar -->
+    <header class="top-bar">
+      <button id="menu-btn" class="icon-btn mobile-only">☰</button>
+      <h1 class="top-bar-title">♪ 无忧音乐</h1>
+      <div class="top-bar-actions">
+        <button id="scan-btn" class="btn btn-text" title="扫描歌曲目录">扫描</button>
+        <div class="lyrics-dropdown">
+          <button id="lyrics-btn" class="btn btn-text" title="歌词管理">歌词: —</button>
+          <div id="lyrics-menu" class="lyrics-menu hidden"></div>
+        </div>
+        <button id="admin-btn" class="btn btn-text" title="管理面板" onclick="window.open('/admin','_blank')">⚙</button>
+      </div>
+    </header>
+
+    <div class="main-area">
+      <!-- Overlay for mobile (outside left-panel so it covers full screen) -->
+      <div id="panel-overlay" class="panel-overlay"></div>
+
+      <!-- LEFT PANEL: Playlists + Song List -->
+      <aside id="left-panel" class="left-panel">
+        <div class="panel-inner">
+          <!-- Favorites -->
+          <section class="panel-section">
+            <div class="section-header">
+              <span class="heart-icon">♥</span>
+              <span>收藏列表</span>
+            </div>
+            <ul id="favorites-list" class="compact-list favorites-list"></ul>
+          </section>
+
+          <!-- Playlists -->
+          <section class="panel-section">
+            <div class="section-header">
+              <span>📋</span>
+              <span>播放列表</span>
+            </div>
+            <ul id="playlist-list" class="compact-list playlist-list"></ul>
+          </section>
+
+          <!-- Current Playlist Songs -->
+          <section class="panel-section song-list-section">
+            <div class="section-header">
+              <span id="playlist-title">选择列表</span>
+              <span id="song-count" class="song-count"></span>
+            </div>
+            <div id="song-list" class="song-list"></div>
+          </section>
+        </div>
+      </aside>
+
+      <!-- RIGHT PANEL: Player View -->
+      <main id="right-panel" class="right-panel">
+        <!-- Empty State -->
+        <div id="empty-state" class="empty-state">
+          <div class="empty-icon">♪</div>
+          <p>选择一首歌曲开始播放</p>
+        </div>
+
+        <!-- Player View -->
+        <div id="player-view" class="player-view hidden">
+          <div class="player-content">
+            <!-- Song Info -->
+            <div class="song-info">
+              <h2 id="song-title" class="song-title">—</h2>
+              <p id="song-artist" class="song-artist">—</p>
+            </div>
+
+            <!-- Lyrics -->
+            <div class="lyrics-container" id="lyrics-container">
+              <div class="lyrics-scroll" id="lyrics-scroll">
+                <p class="lyrics-placeholder">暂无歌词</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- BOTTOM BAR: Player Controls -->
+    <footer id="bottom-bar" class="bottom-bar">
+      <!-- Progress Bar Row -->
+      <div class="bottom-progress">
+        <div class="progress-bar" id="progress-bar">
+          <div class="progress-fill" id="progress-fill"></div>
+          <div class="progress-thumb" id="progress-thumb"></div>
+        </div>
+      </div>
+
+      <div class="bottom-controls">
+        <div class="bc-left">
+          <span id="bc-song" class="bc-song">未播放</span>
+        </div>
+        <div class="bc-center">
+          <button id="prev-btn" class="ctrl-btn" title="上一首">
+            <svg viewBox="0 0 24 24" width="18" height="18">
+              <polyline points="16 6 10 12 16 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <line x1="8" y1="6" x2="8" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <button id="play-btn" class="ctrl-btn ctrl-play" title="播放/暂停">
+            <svg id="play-icon" viewBox="0 0 24 24" width="22" height="22">
+              <polygon points="9,6 19,12 9,18" fill="currentColor"/>
+            </svg>
+            <svg id="pause-icon" viewBox="0 0 24 24" width="22" height="22" style="display:none">
+              <line x1="9" y1="6" x2="9" y2="18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+              <line x1="15" y1="6" x2="15" y2="18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <button id="next-btn" class="ctrl-btn" title="下一首">
+            <svg viewBox="0 0 24 24" width="18" height="18">
+              <polyline points="8 6 14 12 8 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <line x1="16" y1="6" x2="16" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+        <div class="bc-right">
+          <span id="current-time" class="time-tag">00:00</span>
+          <span class="time-sep">/</span>
+          <span id="total-time" class="time-tag">00:00</span>
+          <button id="favorite-btn" class="ctrl-heart" title="收藏">♡</button>
+          <button id="mode-btn" class="btn btn-text" title="播放模式">列表循环</button>
+          <div class="volume-wrap" style="display:none">
+            <span class="vol-icon">🔊</span>
+            <div class="vol-bar" id="volume-bar">
+              <div class="vol-fill" id="volume-fill"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Audio Element -->
+  <audio id="audio-player" preload="meta"></audio>
+  <div id="toast" class="toast hidden"></div>
+  <script src="/js/app.js"></script>
+</body>
+</html>
