@@ -380,7 +380,7 @@ const App = {
           <div class="song-item-title">${this.esc(song.title)}</div>
           <div class="song-item-artist">${this.esc(song.artist)}</div>
         </div>
-        ${this.searchQuery ? '' : '<span class="song-item-lyric-indicator">' + (song.hasLocalLyrics ? '📄' : '🌐') + '</span>'}
+        ${this.searchQuery ? '' : '<span class="song-item-dot' + (song.hasLocalLyrics ? ' has-lyrics' : '') + '"></span>'}
         ${this.searchQuery ? '' : '<span class="song-item-duration">' + (song.duration ? this.fmtTime(song.duration) : '') + '</span>'}
       `;
       div.addEventListener('click', () => this.playSong(origIdx));
@@ -474,6 +474,13 @@ const App = {
 
     this.currentIndex = index;
     this.currentSong = songs[index];
+
+    // Clear search and rebuild full list when playing from search
+    if (this.searchQuery) {
+      this.searchQuery = '';
+      this.els.songSearchInput.value = '';
+      this.renderSongListForCurrent();
+    }
 
     // Update UI
     this.els.songTitle.textContent = this.currentSong.title;
