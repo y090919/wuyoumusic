@@ -2,3 +2,6 @@ __歌曲目录/
 node_modules/
 data/
 *.exe
+_embedded.js
+bundle.js
+sea-prep.blob

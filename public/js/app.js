@@ -490,10 +490,13 @@ const App = {
     this.els.playerView.classList.remove('hidden');
     this.updateFavBtn();
 
-    // Highlight in list
+    // Highlight and scroll in list
     this.els.songList.querySelectorAll('.song-item.active').forEach(el => el.classList.remove('active'));
     const items = this.els.songList.querySelectorAll('.song-item');
-    if (items[index]) items[index].classList.add('active');
+    if (items[index]) {
+      items[index].classList.add('active');
+      items[index].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
 
     // Load audio
     this.els.audio.src = `/api/stream/${this.currentSong.id}`;

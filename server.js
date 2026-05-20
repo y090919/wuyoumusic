@@ -315,6 +315,37 @@ async function fetchLyrics(source, sourceId) {
 // ============================================================
 // Express App Setup
 // ============================================================
+
+// Try loading embedded assets (built by build-exe.js for SEA standalone exe)
+let embeddedAssets = null;
+try { embeddedAssets = require('./_embedded'); } catch (e) { /* dev mode, use disk files */ }
+
+const MIME_TYPES = {
+  '.html': 'text/html', '.css': 'text/css', '.js': 'application/javascript',
+  '.png': 'image/png', '.ico': 'image/x-icon', '.svg': 'image/svg+xml',
+  '.json': 'application/json', '.txt': 'text/plain', '.webp': 'image/webp',
+};
+
+function serveEmbeddedOrDisk(req, res, next) {
+  // Only handle GET for non-API routes
+  if (req.method !== 'GET' || req.path.startsWith('/api/') || req.path.startsWith('/bg-images/')) {
+    return next();
+  }
+  // Try embedded first
+  if (embeddedAssets) {
+    const assetPath = (req.path.replace(/^\//, '') || 'index.html').split('?')[0].replace(/\\/g, '/');
+    const asset = embeddedAssets[assetPath];
+    if (asset) {
+      const ext = path.extname(assetPath).toLowerCase();
+      res.type(MIME_TYPES[ext] || 'application/octet-stream');
+      if (asset.t === 'b') return res.send(Buffer.from(asset.d, 'base64'));
+      return res.send(asset.d);
+    }
+  }
+  // Fallback to disk via express.static
+  next();
+}
+
 function createApp() {
   const app = express();
   app.use(express.json({ limit: '10mb' }));
@@ -323,13 +354,22 @@ function createApp() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   if (!fs.existsSync(BG_DIR)) fs.mkdirSync(BG_DIR, { recursive: true });
 
-  // Static files (works in dev and with pkg bundled assets)
-  app.use(express.static(path.join(ROOT_DIR, 'public')));
+  // Static files — embedded assets first, then disk fallback (dev mode)
+  app.use(serveEmbeddedOrDisk, express.static(path.join(ROOT_DIR, 'public')));
   // Background images
   app.use('/bg-images', express.static(BG_DIR));
 
-  // Fallback route handlers for critical pages (pkg compatibility)
+  // Fallback route handlers for critical pages (embedded / disk fallback)
   const serveFile = (file) => (req, res) => {
+    // Try embedded first
+    if (embeddedAssets && embeddedAssets[file]) {
+      const asset = embeddedAssets[file];
+      const ext = path.extname(file).toLowerCase();
+      res.type(MIME_TYPES[ext] || 'application/octet-stream');
+      if (asset.t === 'b') return res.send(Buffer.from(asset.d, 'base64'));
+      return res.send(asset.d);
+    }
+    // Fallback to disk
     const filePath = path.join(ROOT_DIR, 'public', file);
     if (fs.existsSync(filePath)) {
       res.sendFile(filePath);
