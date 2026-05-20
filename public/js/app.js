@@ -16,6 +16,7 @@ const App = {
   lyricsData: [],
   lyricsSource: 'none',
   playMode: 'list',
+  searchQuery: '',
   bgConfig: null,
   history: null,
 
@@ -59,6 +60,7 @@ const App = {
       toast: $('toast'),
       lyricsBtn: $('lyrics-btn'),
       lyricsMenu: $('lyrics-menu'),
+      songSearchInput: $('song-search-input'),
       audio: $('audio-player'),
       playIcon: $('play-icon'),
       pauseIcon: $('pause-icon'),
@@ -172,6 +174,12 @@ const App = {
 
     // Lyrics dropdown
     e.lyricsBtn.addEventListener('click', () => this.toggleLyricsMenu());
+
+    // Song search
+    e.songSearchInput.addEventListener('input', () => this.filterSongList(e.songSearchInput.value));
+    e.songSearchInput.addEventListener('keydown', (ev) => {
+      if (ev.code === 'Escape') { e.songSearchInput.value = ''; this.filterSongList(''); }
+    });
 
     // Close lyrics dropdown on outside click
     document.addEventListener('click', (ev) => {
@@ -317,6 +325,9 @@ const App = {
 
   async loadPlaylist(name, autoSelect = true) {
     this.currentPlaylist = name;
+    // Clear search
+    this.searchQuery = '';
+    this.els.songSearchInput.value = '';
     this.renderPlaylists();
     this.renderSongListForCurrent();
 
@@ -343,33 +354,48 @@ const App = {
 
   renderSongListForCurrent() {
     const songs = this.currentPlaylistSongs;
+    const filtered = this.searchQuery
+      ? songs.filter(s => this.songMatchesSearch(s))
+      : songs;
     const list = this.els.songList;
     list.innerHTML = '';
     const name = this.currentPlaylist || '选择列表';
     this.els.playlistTitle.textContent = name === '__all__' ? '全部歌曲' : name || '选择列表';
     this.els.songCount.textContent = songs.length ? `${songs.length} 首` : '';
 
-    if (songs.length === 0) {
-      list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px;">暂无歌曲</div>';
+    if (filtered.length === 0) {
+      const msg = this.searchQuery ? '未找到匹配歌曲' : '暂无歌曲';
+      list.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px;">${msg}</div>`;
       return;
     }
 
-    songs.forEach((song, idx) => {
+    filtered.forEach((song, idx) => {
+      const origIdx = songs.indexOf(song);
       const div = document.createElement('div');
       div.className = 'song-item';
       if (this.currentSong && song.id === this.currentSong.id) div.classList.add('active');
       div.innerHTML = `
-        <span class="song-item-index">${idx + 1}</span>
+        ${this.searchQuery ? '' : '<span class="song-item-index">' + (origIdx + 1) + '</span>'}
         <div class="song-item-info">
           <div class="song-item-title">${this.esc(song.title)}</div>
           <div class="song-item-artist">${this.esc(song.artist)}</div>
         </div>
-        <span class="song-item-lyric-indicator">${song.hasLocalLyrics ? '📄' : '🌐'}</span>
-        <span class="song-item-duration">${song.duration ? this.fmtTime(song.duration) : ''}</span>
+        ${this.searchQuery ? '' : '<span class="song-item-lyric-indicator">' + (song.hasLocalLyrics ? '📄' : '🌐') + '</span>'}
+        ${this.searchQuery ? '' : '<span class="song-item-duration">' + (song.duration ? this.fmtTime(song.duration) : '') + '</span>'}
       `;
-      div.addEventListener('click', () => this.playSong(idx));
+      div.addEventListener('click', () => this.playSong(origIdx));
       list.appendChild(div);
     });
+  },
+
+  songMatchesSearch(song) {
+    const q = this.searchQuery.toLowerCase();
+    return song.title.toLowerCase().includes(q) || song.artist.toLowerCase().includes(q);
+  },
+
+  filterSongList(query) {
+    this.searchQuery = query.trim();
+    this.renderSongListForCurrent();
   },
 
   // ============================================================

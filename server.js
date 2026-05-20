@@ -142,25 +142,31 @@ function scanMusicFolder() {
 // ============================================================
 // HTTPS Helper (pkg-compatible alternative to fetch)
 // ============================================================
-function httpsGet(url, extraHeaders) {
+function httpsGet(url, extraHeaders, timeoutMs = 5000) {
   const baseHeaders = {
     'Referer': 'https://music.163.com',
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
   };
   return new Promise((resolve, reject) => {
+    let destroyed = false;
     const req = https.get(url, {
       headers: Object.assign(baseHeaders, extraHeaders || {}),
-      timeout: 5000
+      timeout: timeoutMs
     }, (res) => {
       let data = '';
       res.on('data', (chunk) => { data += chunk; });
       res.on('end', () => {
+        if (destroyed) return;
         try { resolve(JSON.parse(data)); }
         catch (e) { reject(new Error('Invalid JSON')); }
       });
     });
-    req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')); });
+    req.on('error', (e) => { if (!destroyed) { destroyed = true; reject(e); } });
+    req.on('timeout', () => { if (!destroyed) { destroyed = true; req.destroy(); reject(new Error('Timeout')); } });
+    // 兜底：DNS / TCP 连接阶段也加超时
+    setTimeout(() => {
+      if (!destroyed) { destroyed = true; req.destroy(); reject(new Error('Connect Timeout')); }
+    }, timeoutMs + 2000);
   });
 }
 
@@ -335,10 +341,7 @@ function createApp() {
   app.get('/admin', serveFile('admin.html'));
   app.get('/', serveFile('index.html'));
 
-  // Favicon
-  app.get('/favicon.ico', (req, res) => {
-    res.status(204).end();
-  });
+  // Favicon — handled by express.static from public/
 
   // ==================== Music APIs ====================
 
@@ -487,13 +490,14 @@ function createApp() {
 
   // Search lyrics candidates from all sources
   app.get('/api/lyrics/search/:id', async (req, res) => {
-    const song = songDB.find(s => s.id === req.params.id);
-    if (!song) return res.status(404).json({ error: 'Song not found' });
     try {
+      const song = songDB.find(s => s.id === req.params.id);
+      if (!song) return res.status(404).json({ error: 'Song not found' });
       const results = await searchAllSources(song.title, song.artist);
-      res.json({ results });
+      if (!res.headersSent) res.json({ results });
     } catch (e) {
-      res.json({ results: [] });
+      console.error('搜索歌词出错:', e?.message);
+      if (!res.headersSent) res.json({ results: [] });
     }
   });
 
